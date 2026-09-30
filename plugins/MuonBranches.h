@@ -16,6 +16,7 @@
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/MuonReco/interface/MuonSimInfo.h"
 #include "MuonAnalysis/MuonAssociators/interface/PropagateToMuon.h"
+#include "MuonAnalysis/MuonAssociators/interface/PropagateToMuonSetup.h"
 
 #include <type_traits>
 #include "NtupleContent.h"
@@ -45,11 +46,11 @@ inline void FillTagBranches(const MUON &muon,
   nt.tag_isHighPt = muon::isHighPtMuon(muon, vertex);
   float iso04 = (TrackerEnergy04<TRK>(muon.eta(), muon.phi(), tracks) - muon.pt()) / muon.pt();
   nt.tag_relIso04 = (iso04 > 0) ? iso04 : 0;
-  nt.tag_iso03_sumPt = muon.isolationR03().sumPt;
+  /*nt.tag_iso03_sumPt = muon.isolationR03().sumPt;
   nt.tag_pfIso03_charged = muon.pfIsolationR03().sumChargedHadronPt;
   nt.tag_pfIso03_neutral = muon.pfIsolationR03().sumNeutralHadronEt;
   nt.tag_pfIso03_photon = muon.pfIsolationR03().sumPhotonEt;
-  nt.tag_pfIso03_sumPU = muon.pfIsolationR03().sumPUPt;
+  nt.tag_pfIso03_sumPU = muon.pfIsolationR03().sumPUPt;*/
   nt.tag_pfIso04_charged = muon.pfIsolationR04().sumChargedHadronPt;
   nt.tag_pfIso04_neutral = muon.pfIsolationR04().sumNeutralHadronEt;
   nt.tag_pfIso04_photon = muon.pfIsolationR04().sumPhotonEt;
@@ -94,12 +95,12 @@ inline void FillProbeBranches(
     nt.probe_isSA = mu.isStandAloneMuon();
     nt.probe_isTracker = mu.isTrackerMuon();
     nt.probe_isGlobal = mu.isGlobalMuon();
-    nt.probe_iso03_sumPt = mu.isolationR03().sumPt;
+    /*nt.probe_iso03_sumPt = mu.isolationR03().sumPt;
     nt.probe_pfIso03_charged = mu.pfIsolationR03().sumChargedHadronPt;
     nt.probe_pfIso03_neutral = mu.pfIsolationR03().sumNeutralHadronEt;
     nt.probe_pfIso03_photon = mu.pfIsolationR03().sumPhotonEt;
     nt.probe_pfIso03_sumPU = mu.pfIsolationR03().sumPUPt;
-    nt.probe_pfIso04_charged = mu.pfIsolationR04().sumChargedHadronPt;
+    nt.probe_pfIso04_charged = mu.pfIsolationR04().sumChargedHadronPt;*/
     nt.probe_pfIso04_neutral = mu.pfIsolationR04().sumNeutralHadronEt;
     nt.probe_pfIso04_photon = mu.pfIsolationR04().sumPhotonEt;
     nt.probe_pfIso04_sumPU = mu.pfIsolationR04().sumPUPt;
@@ -194,11 +195,11 @@ inline void FillProbeBranches(
     nt.probe_DTHits = -99;
     nt.probe_CSCHits = -99;
     nt.probe_pterr = -99;
-    nt.probe_iso03_sumPt = -99;
+    /*nt.probe_iso03_sumPt = -99;
     nt.probe_pfIso03_charged = -99;
     nt.probe_pfIso03_neutral = -99;
     nt.probe_pfIso03_photon = -99;
-    nt.probe_pfIso03_sumPU = -99;
+    nt.probe_pfIso03_sumPU = -99;*/
     nt.probe_pfIso04_charged = -99;
     nt.probe_pfIso04_neutral = -99;
     nt.probe_pfIso04_photon = -99;
@@ -402,7 +403,7 @@ inline void FillPairBranches(const MUOTT &muon, const TRKTT &trk, NtupleContent 
 
   if (prop1_M1.isValid() && prop2_M1.isValid()) {
     float dphiM1 = deltaPhi<float>(prop1_M1.globalPosition().phi(), prop2_M1.globalPosition().phi());
-    nt.pair_drM1 = hypot(dphiM1, std::abs<float>(prop1_M1.globalPosition().eta() - prop2_M1.globalPosition().eta()));
+    nt.pair_drM1 = hypot(dphiM1, std::abs(prop1_M1.globalPosition().eta() - prop2_M1.globalPosition().eta()));
   }
 }
 

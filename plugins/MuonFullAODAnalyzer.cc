@@ -71,13 +71,14 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "JetMETCorrections/Modules/interface/JetResolution.h"
+#include "CondFormats/DataRecord/interface/JetResolutionRcd.h"
+#include "CondFormats/DataRecord/interface/JetResolutionScaleFactorRcd.h"
 #include "JetMETCorrections/JetCorrector/interface/JetCorrector.h"
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/BTauReco/interface/JetTag.h"
-#include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
 #include "TLorentzVector.h"
@@ -166,6 +167,9 @@ private:
   edm::EDGetToken jetsToken_;
   edm::EDGetToken jetCorrectorToken_;
   edm::EDGetToken genJetsToken_;
+  edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magfieldToken_;
+  JME::JetResolution::Token jetResolutionToken_;
+  JME::JetResolutionScaleFactor::Token jetResolutionScaleFactorToken_;
   edm::EDGetToken deepCSVProbbToken_;
   edm::EDGetToken deepCSVProbbbToken_;
   //  edm::EDGetToken deepFlavProbbToken_;
@@ -202,6 +206,7 @@ private:
   const double genRecoDrMatch_;
   const int debug_;
   PropagateToMuon prop1_;
+  PropagateToMuonSetup propSetup1_;
 
   edm::Service<TFileService> fs;
   TTree* t1;
@@ -249,6 +254,9 @@ MuonFullAODAnalyzer::MuonFullAODAnalyzer(const edm::ParameterSet& iConfig)
       jetsToken_(consumes<std::vector<reco::PFJet>>(iConfig.getParameter<edm::InputTag>("jets"))),
       jetCorrectorToken_(consumes<reco::JetCorrector>(iConfig.getParameter<edm::InputTag>("jetCorrector"))),
       genJetsToken_(consumes<std::vector<reco::GenJet>>(iConfig.getParameter<edm::InputTag>("genJets"))),
+      magfieldToken_(esConsumes<MagneticField, IdealMagneticFieldRecord>()),
+      jetResolutionToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("jetResType")))),
+      jetResolutionScaleFactorToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("jetResSFType")))),
       deepCSVProbbToken_(consumes<reco::JetTagCollection>(iConfig.getParameter<edm::InputTag>("deepCSVProbb"))),
       deepCSVProbbbToken_(consumes<reco::JetTagCollection>(iConfig.getParameter<edm::InputTag>("deepCSVProbbb"))),
       simInfoToken_(consumes<edm::ValueMap<reco::MuonSimInfo>>(iConfig.getParameter<edm::InputTag>("muonSimInfo"))),
@@ -279,7 +287,9 @@ MuonFullAODAnalyzer::MuonFullAODAnalyzer(const edm::ParameterSet& iConfig)
       momPdgId_(iConfig.getParameter<unsigned>("momPdgId")),
       genRecoDrMatch_(iConfig.getParameter<double>("genRecoDrMatch")),
       debug_(iConfig.getParameter<int>("debug")),
-      prop1_(iConfig.getParameter<edm::ParameterSet>("propM1")) {
+      //prop1_(iConfig.getParameter<edm::ParameterSet>("propM1")),
+      prop1_(),
+      propSetup1_(iConfig, consumesCollector()) {
   //  edm::ParameterSet
   //  runParameters=iConfig.getParameter<edm::ParameterSet>("RunParameters");
 
@@ -412,7 +422,8 @@ void MuonFullAODAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetu
   using namespace reco;
   using namespace trigger;
 
-  prop1_.init(iSetup);
+  //prop1_.init(iSetup);
+  prop1_ = propSetup1_.init(iSetup);
 
   // Get data
   edm::Handle<reco::BeamSpot> theBeamSpot;
@@ -457,11 +468,12 @@ void MuonFullAODAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetu
     //  iEvent.getByToken(deepFlavProbbToken_, deepFlavProbb);
     //  edm::Handle<reco::JetTagCollection> deepFlavProbbb;
     //  iEvent.getByToken(deepFlavProbbbToken_, deepFlavProbbb);
-    resolution = JME::JetResolution::get(iSetup, "AK4PFchs_pt");
-    resolution_sf = JME::JetResolutionScaleFactor::get(iSetup, "AK4PFchs");
+    resolution = iSetup.getData(jetResolutionToken_);
+    resolution_sf = iSetup.getData(jetResolutionScaleFactorToken_);
   }
   edm::ESHandle<MagneticField> bField;
-  iSetup.get<IdealMagneticFieldRecord>().get(bField);
+  //iSetup.get<IdealMagneticFieldRecord>().get(bField);
+  bField = iSetup.getHandle(magfieldToken_);
 
   edm::Handle<trigger::TriggerEvent> triggerObjects;
   iEvent.getByToken(trigobjectsToken_, triggerObjects);

@@ -76,7 +76,6 @@
 #include "DataFormats/Math/interface/LorentzVector.h"
 #include "KlFitter.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
@@ -634,7 +633,7 @@ void StandAloneMuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm:
         continue;
     }
     bool fired = false;
-    for (const std::string path : HLTPaths_) {
+    for (const std::string& path : HLTPaths_) {
       char cstr[(path + "*").size() + 1];
       strcpy(cstr, (path + "*").c_str());
       if (!mu.triggered(cstr))
@@ -667,7 +666,7 @@ void StandAloneMuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm:
   // MN added nocuts tracks vector for matching to SA muons
   std::vector<pat::PackedCandidate> tracks;
   std::vector<pat::PackedCandidate> nocut_tracks;
-  for (const auto container : {pfcands, lostTracks}) {
+  for (const auto& container : {pfcands, lostTracks}) {
     for (const pat::PackedCandidate& trk : *container) {
       if (!trk.hasTrackDetails())
         continue;
@@ -743,7 +742,6 @@ void StandAloneMuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm:
     unsigned int idx_trk;
     unsigned int idx_associatedtrk;
     int N_muontracks = mu.numberOfSourceCandidatePtrs();
-    float eps = 1e-2;  // for associated trk to be matched DR and pt diff less than eps
     bool hasAssociatedTrkMatch = false;
     bool isAssoc = false;
     //reco::CandidatePtr trk_mu = mu.originalObjectRef();

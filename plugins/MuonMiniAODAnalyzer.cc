@@ -42,6 +42,8 @@
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
+#include "CondFormats/DataRecord/interface/JetResolutionRcd.h"
+#include "CondFormats/DataRecord/interface/JetResolutionScaleFactorRcd.h"
 #include "JetMETCorrections/Modules/interface/JetResolution.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 
@@ -76,7 +78,6 @@
 #include "DataFormats/Math/interface/LorentzVector.h"
 #include "KlFitter.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "MuonBranches.h"
 #include "MuonGenAnalyzer.h"
@@ -142,6 +143,9 @@ private:
   edm::EDGetTokenT<double> rhoJetsNC_;
   edm::EDGetToken jetsToken_;
   edm::EDGetToken genJetsToken_;
+  edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magfieldToken_;
+  JME::JetResolution::Token jetResolutionToken_;
+  JME::JetResolutionScaleFactor::Token jetResolutionScaleFactorToken_;
   std::vector<std::string> HLTPaths_;
   std::vector<std::string> tagFilters_;
   std::vector<std::string> probeFilters_;
@@ -166,6 +170,7 @@ private:
   const unsigned momPdgId_;
   const double genRecoDrMatch_;
   PropagateToMuon prop1_;
+  PropagateToMuonSetup propSetup1_;
 
   edm::Service<TFileService> fs;
   TTree* t1;
@@ -214,6 +219,9 @@ MuonMiniAODAnalyzer::MuonMiniAODAnalyzer(const edm::ParameterSet& iConfig)
       rhoJetsNC_(consumes<double>(iConfig.getParameter<edm::InputTag>("rhoJetsNC"))),
       jetsToken_(consumes<std::vector<pat::Jet>>(iConfig.getParameter<edm::InputTag>("jets"))),
       genJetsToken_(consumes<std::vector<reco::GenJet>>(iConfig.getParameter<edm::InputTag>("genJets"))),
+      magfieldToken_(esConsumes<MagneticField, IdealMagneticFieldRecord>()),
+      jetResolutionToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("jetResType")))),
+      jetResolutionScaleFactorToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("jetResSFType")))),
       HLTPaths_(iConfig.getParameter<std::vector<std::string>>("triggerPaths")),
       tagFilters_(iConfig.getParameter<std::vector<std::string>>("tagFilters")),
       probeFilters_(iConfig.getParameter<std::vector<std::string>>("probeFilters")),
@@ -235,7 +243,10 @@ MuonMiniAODAnalyzer::MuonMiniAODAnalyzer(const edm::ParameterSet& iConfig)
       maxdr_trk_mu_(iConfig.getParameter<double>("maxDRProbeTrkMuon")),
       momPdgId_(iConfig.getParameter<unsigned>("momPdgId")),
       genRecoDrMatch_(iConfig.getParameter<double>("genRecoDrMatch")),
-      prop1_(iConfig.getParameter<edm::ParameterSet>("propM1")),
+      //magfieldToken_(iConfig.getParameter<edm::ParameterSet>("propM1")),
+      //prop1_(iConfig.getParameter<edm::ParameterSet>("propM1")),
+      prop1_(),
+      propSetup1_(iConfig, consumesCollector()),
       isMC_(iConfig.getParameter<bool>("isMC")),
       includeJets_(iConfig.getParameter<bool>("includeJets")),
       era_(iConfig.getParameter<std::string>("era")) {
@@ -345,7 +356,8 @@ void MuonMiniAODAnalyzer::embedTriggerMatching(const edm::Event& iEvent,
 // ------------ method called for each event  ------------
 
 void MuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  prop1_.init(iSetup);
+  //prop1_.init(iSetup);
+  prop1_ = propSetup1_.init(iSetup);
 
   edm::Handle<reco::BeamSpot> theBeamSpot;
   iEvent.getByToken(beamSpotToken_, theBeamSpot);
@@ -364,18 +376,21 @@ void MuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetu
   edm::Handle<std::vector<pat::PackedCandidate>> lostTracks;
   iEvent.getByToken(LostTracks_, lostTracks);
   edm::ESHandle<MagneticField> bField;
-  iSetup.get<IdealMagneticFieldRecord>().get(bField);
+  bField = iSetup.getHandle(magfieldToken_);
+  //iSetup.get<IdealMagneticFieldRecord>().get(bField);
   edm::Handle<double> rhoJetsNC;
   iEvent.getByToken(rhoJetsNC_, rhoJetsNC);
   edm::Handle<std::vector<pat::Jet>> jets;
   iEvent.getByToken(jetsToken_, jets);
-  iSetup.get<IdealMagneticFieldRecord>().get(bField);
+  //iSetup.get<IdealMagneticFieldRecord>().get(bField);
   edm::Handle<std::vector<reco::GenJet>> genJets;
   iEvent.getByToken(genJetsToken_, genJets);
   JME::JetResolution resolution;
-  resolution = JME::JetResolution::get(iSetup, "AK4PFchs_pt");
+  //resolution = JME::JetResolution::get(iSetup, "AK4PFchs_pt");
+  resolution = iSetup.getData(jetResolutionToken_);
   JME::JetResolutionScaleFactor resolution_sf;
-  resolution_sf = JME::JetResolutionScaleFactor::get(iSetup, "AK4PFchs");
+  //resolution_sf = JME::JetResolutionScaleFactor::get(iSetup, "AK4PFchs");
+  resolution_sf = iSetup.getData(jetResolutionScaleFactorToken_);
 
   edm::Handle<edm::TriggerResults> trigResults;
   iEvent.getByToken(trgresultsToken_, trigResults);
@@ -485,10 +500,9 @@ void MuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetu
         continue;
     }
     bool fired = false;
-    for (const std::string path : HLTPaths_) {
-      char cstr[(path + "*").size() + 1];
-      strcpy(cstr, (path + "*").c_str());
-      if (!mu.triggered(cstr))
+    for (const auto& path : HLTPaths_) {
+      const std::string triggerPattern = path + "*";
+      if (!mu.triggered(triggerPattern.c_str()))
         continue;
       fired = true;
       break;
@@ -511,7 +525,7 @@ void MuonMiniAODAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetu
 
   // Add Lost Tracks to Packed cands
   std::vector<pat::PackedCandidate> tracks;
-  for (const auto container : {pfcands, lostTracks}) {
+  for (const auto& container : {pfcands, lostTracks}) {
     for (const pat::PackedCandidate& trk : *container) {
       if (!probeSelection_(trk))
         continue;
